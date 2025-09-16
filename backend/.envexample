@@ -1,0 +1,42 @@
+# Server Configuration
+PORT=3000
+NODE_ENV=development
+
+# Frontend URL
+FRONTEND_URL=http://localhost:8081
+
+# ===========================================
+# EXISTING SERVICES (Keep these)
+# ===========================================
+
+# OpenAI Configuration (Keep for TTS if not using Vapi fully)
+OPENAI_API_KEY=your_openai_api_key_here
+
+# OpenWeather Configuration
+OPENWEATHER_API_KEY=your_openweather_api_key_here
+
+# Firebase Configuration
+FIREBASE_PROJECT_ID=your_firebase_project_id
+FIREBASE_PRIVATE_KEY=your_firebase_private_key
+FIREBASE_CLIENT_EMAIL=your_firebase_client_email
+
+# ===========================================
+# NEW SERVICES FOR HACKATHON
+# ===========================================
+
+# Weaviate Cloud (Vector Database for Journals)
+# Get from: https://console.weaviate.cloud/
+WEAVIATE_URL=https://your-instance.weaviate.network
+WEAVIATE_API_KEY=your_weaviate_api_key
+
+# Vapi (Voice Conversations)
+# Get from: https://dashboard.vapi.ai/
+VAPI_API_KEY=your_vapi_api_key
+VAPI_PHONE_NUMBER_ID=optional_phone_number_id
+VAPI_ASSISTANT_ID=your_vapi_assistant_id
+
+# Friendli.ai (LLM Optimization)
+# Get from: https://suite.friendli.ai/
+FRIENDLI_API_KEY=your_friendli_api_key
+FRIENDLI_MODEL=meta-llama-3.1-8b-instruct
+FRIENDLI_ENDPOINT=https://inference.friendli.ai/v1
