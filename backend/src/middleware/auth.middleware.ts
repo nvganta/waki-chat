@@ -34,7 +34,7 @@ export const authMiddleware = async (
     // Update last login
     await authService.updateLastLogin(decodedToken.uid);
 
-    next();
+    return next();
   } catch (error) {
     console.error('Authentication error:', error);
     return res.status(401).json({ error: 'Invalid or expired token' });
@@ -43,7 +43,7 @@ export const authMiddleware = async (
 
 export const optionalAuth = async (
   req: AuthRequest,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   try {
@@ -60,9 +60,9 @@ export const optionalAuth = async (
       };
     }
 
-    next();
+    return next();
   } catch (error) {
     // Continue without authentication
-    next();
+    return next();
   }
 };

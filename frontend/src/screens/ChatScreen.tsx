@@ -13,7 +13,6 @@ import { API_URL } from '../config';
 
 interface VapiCallData {
   assistantId: string;
-  webCallUrl: string;
 }
 
 export default function ChatScreen() {

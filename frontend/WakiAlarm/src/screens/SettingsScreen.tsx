@@ -8,11 +8,12 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { preferencesAPI, aiAPI } from '../services/api';
+import { preferencesAPI } from '../services/api';
+import {previewDeviceAlarm} from '../services/deviceAlarms';
 import { firebaseAuth } from '../services/firebase';
 import { UserPreferences } from '../types';
 
-const SettingsScreen = ({ navigation }: any) => {
+const SettingsScreen = () => {
   const [preferences, setPreferences] = useState<UserPreferences>({
     userId: '',
     name: '',
@@ -52,8 +53,7 @@ const SettingsScreen = ({ navigation }: any) => {
   const handleTestAlarm = async () => {
     setTesting(true);
     try {
-      const response = await aiAPI.testAlarm();
-      Alert.alert('Test Alarm', response.data.message);
+      await previewDeviceAlarm();
     } catch (error) {
       Alert.alert('Error', 'Failed to test alarm');
     } finally {
@@ -98,7 +98,7 @@ const SettingsScreen = ({ navigation }: any) => {
       <View style={styles.content}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Personal Information</Text>
-          
+
           <Text style={styles.label}>Your Name</Text>
           <TextInput
             style={styles.input}
@@ -160,6 +160,26 @@ const SettingsScreen = ({ navigation }: any) => {
                   ]}
                 >
                   {style.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Wake-up Approach</Text>
+          <View style={styles.voiceStyles}>
+            {(['gentle', 'moderate', 'assertive'] as const).map((value) => (
+              <TouchableOpacity
+                key={value}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: (preferences.wakeUpStyle || 'moderate') === value }}
+                accessibilityLabel={value}
+                style={[styles.voiceStyleButton, (preferences.wakeUpStyle || 'moderate') === value && styles.voiceStyleActive]}
+                onPress={() => setPreferences({ ...preferences, wakeUpStyle: value })}
+              >
+                <Text style={[styles.voiceStyleText, (preferences.wakeUpStyle || 'moderate') === value && styles.voiceStyleTextActive]}>
+                  {value.charAt(0).toUpperCase() + value.slice(1)}
                 </Text>
               </TouchableOpacity>
             ))}

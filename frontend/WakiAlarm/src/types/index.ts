@@ -21,6 +21,7 @@ export interface UserPreferences {
     lon?: number;
   };
   voiceStyle: 'friendly' | 'professional' | 'energetic' | 'calm';
+  wakeUpStyle?: 'gentle' | 'moderate' | 'assertive';
   includeWeather: boolean;
   includeNews: boolean;
   newsTopics?: string[];

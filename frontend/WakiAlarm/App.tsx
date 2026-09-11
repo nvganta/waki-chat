@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
+import {View, Text, Button, Alert, StyleSheet} from 'react-native';
+import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { firebaseAuth } from './src/services/firebase';
+import {restoreDeviceAlarms, previewDeviceAlarm} from './src/services/deviceAlarms';
 import LoginScreen from './src/screens/LoginScreen';
 import AlarmListScreen from './src/screens/AlarmListScreen';
 import AlarmDetailScreen from './src/screens/AlarmDetailScreen';
@@ -108,25 +111,38 @@ const AppStack = () => {
 const App = () => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [configured] = useState(() => firebaseAuth.isConfigured());
 
   useEffect(() => {
-    const unsubscribe = firebaseAuth.onAuthStateChanged((currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
+    if (!configured) { setLoading(false); return; }
+    let mounted = true;
+    const unsubscribe = firebaseAuth.onAuthStateChanged(currentUser => {
+      setLoading(true);
+      restoreDeviceAlarms(currentUser?.uid || null).then(() => {
+        if (mounted) setUser(currentUser);
+      }).catch(error => Alert.alert('Alarm restore failed', error.message))
+        .finally(() => { if (mounted) setLoading(false); });
     });
+    return () => { mounted = false; unsubscribe(); };
+  }, [configured]);
 
-    return unsubscribe;
-  }, []);
-
-  if (loading) {
-    return null; // You can add a splash screen here
+  if (loading) return null;
+  if (!configured) {
+    return <View style={setupStyles.container}>
+      <Text style={setupStyles.title}>Waki needs account setup</Text>
+      <Text style={setupStyles.copy}>This build is not connected to sign-in yet. You can still try the alarm sound and voice controls.</Text>
+      <Button title="Try the alarm" onPress={() => previewDeviceAlarm().catch(error => Alert.alert('Preview unavailable', error.message))} />
+    </View>;
   }
-
-  return (
-    <NavigationContainer>
-      {user ? <AppStack /> : <AuthStack />}
-    </NavigationContainer>
-  );
+  return <GestureHandlerRootView style={setupStyles.root}>
+    <NavigationContainer>{user ? <AppStack /> : <AuthStack />}</NavigationContainer>
+  </GestureHandlerRootView>;
 };
 
+const setupStyles = StyleSheet.create({
+  root: {flex: 1},
+  container: {flex: 1, justifyContent: 'center', padding: 24, backgroundColor: '#1a1a2e'},
+  title: {fontSize: 24, color: '#fff', marginBottom: 16},
+  copy: {fontSize: 16, color: '#ddd', marginBottom: 24},
+});
 export default App;
