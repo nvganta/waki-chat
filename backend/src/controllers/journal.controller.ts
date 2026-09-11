@@ -24,13 +24,13 @@ export class JournalController {
         createdAt: new Date(),
       });
 
-      res.status(201).json({
+      return res.status(201).json({
         message: 'Journal entry created successfully',
         id: entryId,
       });
     } catch (error) {
       console.error('Error creating journal entry:', error);
-      res.status(500).json({ error: 'Failed to create journal entry' });
+      return res.status(500).json({ error: 'Failed to create journal entry' });
     }
   }
 
@@ -43,10 +43,10 @@ export class JournalController {
       const limit = parseInt(req.query.limit as string) || 10;
       const entries = await journalService.getEntries(req.user.uid, limit);
 
-      res.json(entries);
+      return res.json(entries);
     } catch (error) {
       console.error('Error fetching journal entries:', error);
-      res.status(500).json({ error: 'Failed to fetch journal entries' });
+      return res.status(500).json({ error: 'Failed to fetch journal entries' });
     }
   }
 
@@ -69,10 +69,10 @@ export class JournalController {
         limit
       );
 
-      res.json(entries);
+      return res.json(entries);
     } catch (error) {
       console.error('Error searching journal entries:', error);
-      res.status(500).json({ error: 'Failed to search journal entries' });
+      return res.status(500).json({ error: 'Failed to search journal entries' });
     }
   }
 
@@ -90,7 +90,7 @@ export class JournalController {
 
       await journalService.deleteEntry(req.user.uid, id);
 
-      res.json({ message: 'Journal entry deleted successfully' });
+      return res.json({ message: 'Journal entry deleted successfully' });
     } catch (error: any) {
       console.error('Error deleting journal entry:', error);
       
@@ -98,7 +98,7 @@ export class JournalController {
         return res.status(403).json({ error: error.message });
       }
       
-      res.status(500).json({ error: 'Failed to delete journal entry' });
+      return res.status(500).json({ error: 'Failed to delete journal entry' });
     }
   }
 
@@ -111,10 +111,10 @@ export class JournalController {
       const days = parseInt(req.query.days as string) || 30;
       const stats = await journalService.getMoodStats(req.user.uid, days);
 
-      res.json(stats);
+      return res.json(stats);
     } catch (error) {
       console.error('Error fetching mood stats:', error);
-      res.status(500).json({ error: 'Failed to fetch mood statistics' });
+      return res.status(500).json({ error: 'Failed to fetch mood statistics' });
     }
   }
 
@@ -132,10 +132,10 @@ export class JournalController {
 
       const analysis = await journalService.analyzeMood(content);
 
-      res.json(analysis);
+      return res.json(analysis);
     } catch (error) {
       console.error('Error analyzing mood:', error);
-      res.status(500).json({ error: 'Failed to analyze mood' });
+      return res.status(500).json({ error: 'Failed to analyze mood' });
     }
   }
 }

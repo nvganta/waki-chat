@@ -13,7 +13,6 @@ import { API_URL } from '../config';
 
 interface VapiCallData {
   assistantId: string;
-  webCallUrl: string;
 }
 
 export default function ChatScreen() {
@@ -67,7 +66,7 @@ export default function ChatScreen() {
         const data = await response.json();
         setCallData(data);
         setIsCallActive(true);
-        
+
         // On web, we would embed Vapi's web SDK here
         // For mobile, we'd use WebRTC integration
         Alert.alert(
@@ -100,7 +99,7 @@ export default function ChatScreen() {
 
       setIsCallActive(false);
       setCallData(null);
-      
+
       Alert.alert(
         'Call Ended',
         'Would you like to save this conversation to your journal?',
@@ -117,7 +116,7 @@ export default function ChatScreen() {
   const saveToJournal = async () => {
     try {
       const token = await AsyncStorage.getItem('authToken');
-      
+
       // Get transcript from Vapi
       if (callData) {
         const transcriptResponse = await fetch(
@@ -131,7 +130,7 @@ export default function ChatScreen() {
 
         if (transcriptResponse.ok) {
           const { transcript } = await transcriptResponse.json();
-          
+
           // Save to journal
           await fetch(`${API_URL}/api/journal/entries`, {
             method: 'POST',

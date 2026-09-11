@@ -65,3 +65,8 @@ coverage/
 .env.rtf
 *.pem
 .firebase/
+# Repository local configuration
+.env
+.env.*
+!.env.example
+!.env.*.example

@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
-import { voiceJournalService, audioUpload } from '../services/voiceJournal.service';
+import { voiceJournalService } from '../services/voiceJournal.service';
 
 export class VoiceJournalController {
   async processVoiceJournal(req: AuthRequest, res: Response) {
@@ -21,13 +21,13 @@ export class VoiceJournalController {
         keepAudio
       );
 
-      res.json({
+      return res.json({
         success: true,
         ...result,
       });
     } catch (error) {
       console.error('Error processing voice journal:', error);
-      res.status(500).json({ error: 'Failed to process voice journal' });
+      return res.status(500).json({ error: 'Failed to process voice journal' });
     }
   }
 
@@ -39,10 +39,10 @@ export class VoiceJournalController {
 
       const summary = await voiceJournalService.generateDailySummary(req.user.uid);
 
-      res.json({ summary });
+      return res.json({ summary });
     } catch (error) {
       console.error('Error generating daily summary:', error);
-      res.status(500).json({ error: 'Failed to generate daily summary' });
+      return res.status(500).json({ error: 'Failed to generate daily summary' });
     }
   }
 
@@ -55,10 +55,10 @@ export class VoiceJournalController {
       const days = parseInt(req.query.days as string) || 7;
       const insights = await voiceJournalService.getAudioInsights(req.user.uid, days);
 
-      res.json(insights);
+      return res.json(insights);
     } catch (error) {
       console.error('Error getting audio insights:', error);
-      res.status(500).json({ error: 'Failed to get audio insights' });
+      return res.status(500).json({ error: 'Failed to get audio insights' });
     }
   }
 }
