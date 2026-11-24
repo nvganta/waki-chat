@@ -1,7 +1,5 @@
 import { journalService } from './journal.service';
 import { goalsService } from './goals.service';
-import { voiceJournalService } from './voiceJournal.service';
-import { firestore } from '../config/firebase';
 
 interface DashboardData {
   moodTrends: MoodTrend[];
@@ -289,7 +287,7 @@ export class AnalyticsService {
   }
 
   private async generateInsights(
-    userId: string, 
+    _userId: string,
     moodTrends: MoodTrend[], 
     journalStats: JournalStats
   ): Promise<Insight[]> {
@@ -340,7 +338,7 @@ export class AnalyticsService {
     return insights;
   }
 
-  private async generateRecommendations(userId: string, insights: Insight[]): Promise<string[]> {
+  private async generateRecommendations(_userId: string, insights: Insight[]): Promise<string[]> {
     const recommendations: string[] = [];
 
     // Based on insights, generate personalized recommendations

@@ -7,14 +7,14 @@ import multer from 'multer';
 
 // Configure multer for audio file uploads
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
+  destination: (_req, _file, cb) => {
     const uploadDir = path.join(__dirname, '../../uploads/audio');
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
     cb(null, uploadDir);
   },
-  filename: (req, file, cb) => {
+  filename: (_req, file, cb) => {
     const uniqueName = `${uuidv4()}-${Date.now()}${path.extname(file.originalname)}`;
     cb(null, uniqueName);
   },
@@ -25,7 +25,7 @@ export const audioUpload = multer({
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB max
   },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (_req, file, cb) => {
     const allowedTypes = ['audio/mpeg', 'audio/wav', 'audio/webm', 'audio/ogg', 'audio/mp4'];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
@@ -149,7 +149,8 @@ export class VoiceJournalService {
       
       voiceEntries.forEach(entry => {
         // Count moods
-        moodCounts[entry.mood] = (moodCounts[entry.mood] || 0) + 1;
+        const mood = entry.mood || 'neutral';
+        moodCounts[mood] = (moodCounts[mood] || 0) + 1;
         
         // Extract words for frequency analysis
         const words = entry.content.toLowerCase()
@@ -179,7 +180,7 @@ export class VoiceJournalService {
         averageMood,
         topWords,
         speakingPatterns: {
-          averageLength: Math.round(allWords.length / voiceEntries.length),
+          averageLength: voiceEntries.length ? Math.round(allWords.length / voiceEntries.length) : 0,
           vocabularySize: new Set(allWords).size,
         },
       };

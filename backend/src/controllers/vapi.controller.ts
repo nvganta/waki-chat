@@ -16,7 +16,7 @@ export class VapiController {
       let weather;
       if (location) {
         try {
-          weather = await weatherService.getWeather(location);
+          weather = await weatherService.getWeatherByCity(location);
         } catch (error) {
           console.error('Failed to fetch weather:', error);
         }
@@ -36,13 +36,13 @@ export class VapiController {
 
       const webCall = await vapiService.createWebCall(context);
 
-      res.json({
+      return res.json({
         success: true,
         ...webCall,
       });
     } catch (error) {
       console.error('Error creating web call:', error);
-      res.status(500).json({ error: 'Failed to create voice call' });
+      return res.status(500).json({ error: 'Failed to create voice call' });
     }
   }
 
@@ -62,7 +62,7 @@ export class VapiController {
       let weather;
       if (location) {
         try {
-          weather = await weatherService.getWeather(location);
+          weather = await weatherService.getWeatherByCity(location);
         } catch (error) {
           console.error('Failed to fetch weather:', error);
         }
@@ -82,14 +82,14 @@ export class VapiController {
 
       const call = await vapiService.createPhoneCall(phoneNumber, context);
 
-      res.json({
+      return res.json({
         success: true,
         callId: call.id,
         status: call.status,
       });
     } catch (error) {
       console.error('Error creating phone call:', error);
-      res.status(500).json({ error: 'Failed to initiate phone call' });
+      return res.status(500).json({ error: 'Failed to initiate phone call' });
     }
   }
 
@@ -107,10 +107,10 @@ export class VapiController {
 
       await vapiService.endCall(callId);
 
-      res.json({ success: true, message: 'Call ended successfully' });
+      return res.json({ success: true, message: 'Call ended successfully' });
     } catch (error) {
       console.error('Error ending call:', error);
-      res.status(500).json({ error: 'Failed to end call' });
+      return res.status(500).json({ error: 'Failed to end call' });
     }
   }
 
@@ -128,10 +128,10 @@ export class VapiController {
 
       const transcript = await vapiService.getCallTranscript(callId);
 
-      res.json({ transcript });
+      return res.json({ transcript });
     } catch (error) {
       console.error('Error fetching transcript:', error);
-      res.status(500).json({ error: 'Failed to fetch transcript' });
+      return res.status(500).json({ error: 'Failed to fetch transcript' });
     }
   }
 
@@ -144,10 +144,10 @@ export class VapiController {
 
       await vapiService.handleWebhook(event);
 
-      res.status(200).json({ received: true });
+      return res.status(200).json({ received: true });
     } catch (error) {
       console.error('Error handling webhook:', error);
-      res.status(500).json({ error: 'Failed to process webhook' });
+      return res.status(500).json({ error: 'Failed to process webhook' });
     }
   }
 }

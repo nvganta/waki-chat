@@ -1,0 +1,26 @@
+# LOG.md
+
+## Status
+
+- State: active
+- Live URL: none verified in this consolidation pass
+- Stranger test: automated checks and debug APK recorded; real Android phone acceptance pending
+- Currently working on: Phone acceptance of the reboot-safe local alarm with DEVICE-TEST.md
+- Blocked on investor: Android phone connection and intended Firebase project configuration for device validation
+
+## Session notes
+
+- 2026-11-24: Compiled and finished the native alarm work. Alarms now live in device-protected storage with direct-boot-aware receiver, service and ringing screen, so LOCKED_BOOT_COMPLETED re-arms them before first unlock. Exact alarms use USE_EXACT_ALARM on Android 13+ and SCHEDULE_EXACT_ALARM on 12; the home screen explains any blocked permission in plain words. Clock and time-zone changes recompute wall-clock times, opening the app re-arms alarms after a force stop, and the bundled tone plays when the system sound or TTS fails. Scheduling rules moved into pure AlarmRules functions with JVM tests. Deleted the hidden legacy screens, their services and their Firebase/navigation/HTTP dependencies, and unused website UI components. Checks: Gradle :app:testDebugUnitTest (25 JVM tests) and :app:assembleDebug passed, and :app:assembleRelease for arm64-v8a passed after raising Gradle metaspace for release lint; mobile jest 12 passed, tsc and eslint clean; backend 17 passed; website lint 0 errors and build passed; website screenshots at 1440px and 390px with no horizontal overflow. No Android emulator image exists on this machine, so nothing ran on a device. Phone acceptance remains.
+
+- 2026-11-23: Added a bundled fallback tone, rescheduling on clock or time-zone changes, a DST rule test, and an unconfigured-provider response for the legacy backend. Installed dependencies with local npm cache; backend tests (17), mobile mocked tests (10), mobile typecheck, website build and unconfigured backend health/API checks passed. Full mobile and website lint still report inherited errors. Android SDK adb and emulator execution was denied by the sandbox; two Gradle attempts exited 1 before native tests or APK packaging without a useful diagnostic. The native changes are uncompiled and device delivery, reboot before unlock, snooze, time changes and fallback audio remain unverified. Real-phone acceptance is still required.
+
+- 2026-11-23: Added an account-free single local alarm screen and local greeting, removed unrelated tabs from the main path, corrected website claims, and added a phone test script. Backend tests (17), mobile mocked tests (10), mobile typecheck and changed-file lint, website build, browser screenshots, and repository handoff check passed. Full mobile and website lint still fail in legacy files. A Gradle build attempt using bundled Android Studio Java exited unsuccessfully, and no Android SDK or device was found for a fresh APK or alarm acceptance; reboot, timezone/DST, fallback audio and real delivery remain unproven. Backend journal/goals/analytics code is retained as dormant legacy rather than used in the local alarm; the backend is not required by this flow.
+
+
+- 2026-09-10: Added repository orientation, agent handoff, setup/check instructions and a documentation CI baseline. Existing implementation and historical evidence remain in place; the repository handoff check and git diff --check passed. Runtime acceptance was not rerun unless a separate entry below explicitly records it. See DEVELOPMENT.md for verification gaps.
+
+- 2026-09-10: Consolidated related projects under this canonical folder. See CONSOLIDATION.md for incorporated code, preserved originals, checks, and outstanding work.
+
+- 2026-09-10: Resolved all 64 inherited backend TypeScript diagnostics with strict checks retained. All 15 offline tests pass. See CONSOLIDATION.md for the integration repairs and remaining device/provider work.
+
+- 2026-09-10: Added native Android scheduling, saved greeting/TTS, stop/snooze and speech commands. 34 automated tests pass across backend/mobile/native rules. Android debug APK builds. See ANDROID-TESTING.md; real phone tests remain outstanding.

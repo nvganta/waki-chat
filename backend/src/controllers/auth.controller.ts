@@ -8,26 +8,26 @@ export class AuthController {
       const { email, password, displayName } = req.body;
 
       if (!email || !password || !displayName) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'Email, password, and display name are required' 
         });
       }
 
       if (password.length < 6) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'Password must be at least 6 characters' 
         });
       }
 
       const uid = await authService.createUser(email, password, displayName);
 
-      res.status(201).json({
+      return res.status(201).json({
         message: 'User created successfully',
         uid,
       });
     } catch (error: any) {
       console.error('Registration error:', error);
-      res.status(400).json({ 
+      return res.status(400).json({
         error: error.message || 'Failed to register user' 
       });
     }
@@ -45,10 +45,10 @@ export class AuthController {
         return res.status(404).json({ error: 'User not found' });
       }
 
-      res.json(user);
+      return res.json(user);
     } catch (error) {
       console.error('Error fetching profile:', error);
-      res.status(500).json({ error: 'Failed to fetch profile' });
+      return res.status(500).json({ error: 'Failed to fetch profile' });
     }
   }
 
@@ -66,10 +66,10 @@ export class AuthController {
 
       await authService.updateUserProfile(req.user.uid, updates);
 
-      res.json({ message: 'Profile updated successfully' });
+      return res.json({ message: 'Profile updated successfully' });
     } catch (error) {
       console.error('Error updating profile:', error);
-      res.status(500).json({ error: 'Failed to update profile' });
+      return res.status(500).json({ error: 'Failed to update profile' });
     }
   }
 
@@ -81,10 +81,10 @@ export class AuthController {
 
       await authService.deleteUser(req.user.uid);
 
-      res.json({ message: 'Account deleted successfully' });
+      return res.json({ message: 'Account deleted successfully' });
     } catch (error) {
       console.error('Error deleting account:', error);
-      res.status(500).json({ error: 'Failed to delete account' });
+      return res.status(500).json({ error: 'Failed to delete account' });
     }
   }
 
@@ -98,13 +98,13 @@ export class AuthController {
 
       const decodedToken = await authService.verifyToken(token);
 
-      res.json({
+      return res.json({
         valid: true,
         uid: decodedToken.uid,
         email: decodedToken.email,
       });
     } catch (error) {
-      res.status(401).json({
+      return res.status(401).json({
         valid: false,
         error: 'Invalid or expired token',
       });

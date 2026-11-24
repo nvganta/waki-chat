@@ -7,7 +7,7 @@
     "dev": "nodemon src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "jest"
+    "test": "npm run build && node tests/run.cjs"
   },
   "keywords": [
     "alarm",

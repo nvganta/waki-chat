@@ -1,5 +1,5 @@
 import { getWeaviateClient } from '../config/weaviate';
-import { v4 as uuidv4 } from 'uuid';
+import { Filters } from 'weaviate-client';
 import { getFriendliCompletion } from './friendli.service';
 
 interface JournalEntry {
@@ -23,7 +23,7 @@ export class JournalService {
   async createEntry(entry: JournalEntry): Promise<string> {
     try {
       const client = await getWeaviateClient();
-      const journal = client.collections.get('Journal');
+      const journal = client.collections.get<Omit<JournalEntry, 'id'>>('Journal');
       
       // Analyze mood and sentiment if not provided
       if (!entry.mood || entry.sentiment === undefined) {
@@ -43,7 +43,7 @@ export class JournalService {
         sentiment: entry.sentiment || 0,
       });
       
-      return result.id;
+      return result;
     } catch (error) {
       console.error('Error creating journal entry:', error);
       throw new Error('Failed to create journal entry');
@@ -53,19 +53,12 @@ export class JournalService {
   async getEntries(userId: string, limit: number = 10): Promise<JournalEntry[]> {
     try {
       const client = await getWeaviateClient();
-      const journal = client.collections.get('Journal');
+      const journal = client.collections.get<Omit<JournalEntry, 'id'>>('Journal');
       
       const result = await journal.query.fetchObjects({
-        where: {
-          path: ['userId'],
-          operator: 'Equal',
-          valueText: userId,
-        },
+        filters: journal.filter.byProperty('userId').equal(userId),
         limit,
-        sort: {
-          path: ['createdAt'],
-          order: 'desc',
-        },
+        sort: journal.sort.byProperty('createdAt', false),
       });
       
       return result.objects.map(obj => ({
@@ -75,7 +68,7 @@ export class JournalService {
         mood: obj.properties.mood as string,
         tags: obj.properties.tags as string[],
         audioUrl: obj.properties.audioUrl as string,
-        createdAt: new Date(obj.properties.createdAt as string),
+        createdAt: new Date(obj.properties.createdAt),
         sentiment: obj.properties.sentiment as number,
       }));
     } catch (error) {
@@ -87,14 +80,10 @@ export class JournalService {
   async searchEntries(userId: string, query: string, limit: number = 10): Promise<JournalEntry[]> {
     try {
       const client = await getWeaviateClient();
-      const journal = client.collections.get('Journal');
+      const journal = client.collections.get<Omit<JournalEntry, 'id'>>('Journal');
       
       const result = await journal.query.nearText(query, {
-        where: {
-          path: ['userId'],
-          operator: 'Equal',
-          valueText: userId,
-        },
+        filters: journal.filter.byProperty('userId').equal(userId),
         limit,
       });
       
@@ -105,7 +94,7 @@ export class JournalService {
         mood: obj.properties.mood as string,
         tags: obj.properties.tags as string[],
         audioUrl: obj.properties.audioUrl as string,
-        createdAt: new Date(obj.properties.createdAt as string),
+        createdAt: new Date(obj.properties.createdAt),
         sentiment: obj.properties.sentiment as number,
       }));
     } catch (error) {
@@ -117,7 +106,7 @@ export class JournalService {
   async deleteEntry(userId: string, entryId: string): Promise<void> {
     try {
       const client = await getWeaviateClient();
-      const journal = client.collections.get('Journal');
+      const journal = client.collections.get<Omit<JournalEntry, 'id'>>('Journal');
       
       // Verify ownership before deletion
       const entry = await journal.query.fetchObjectById(entryId);
@@ -165,30 +154,17 @@ export class JournalService {
   async getMoodStats(userId: string, days: number = 30): Promise<any> {
     try {
       const client = await getWeaviateClient();
-      const journal = client.collections.get('Journal');
+      const journal = client.collections.get<Omit<JournalEntry, 'id'>>('Journal');
       
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
       
-      const result = await journal.aggregate.overAll({
-        where: {
-          operator: 'And',
-          operands: [
-            {
-              path: ['userId'],
-              operator: 'Equal',
-              valueText: userId,
-            },
-            {
-              path: ['createdAt'],
-              operator: 'GreaterThan',
-              valueDate: startDate.toISOString(),
-            },
-          ],
-        },
-        groupBy: {
-          property: 'mood',
-        },
+      const result = await journal.aggregate.groupBy.overAll({
+        filters: Filters.and(
+          journal.filter.byProperty('userId').equal(userId),
+          journal.filter.byProperty('createdAt').greaterThan(startDate),
+        ),
+        groupBy: { property: 'mood' },
       });
       
       return result;
