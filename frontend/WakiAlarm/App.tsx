@@ -1,148 +1,158 @@
-import React, { useEffect, useState } from 'react';
-import {View, Text, Button, Alert, StyleSheet} from 'react-native';
-import {GestureHandlerRootView} from 'react-native-gesture-handler';
-import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { firebaseAuth } from './src/services/firebase';
-import {restoreDeviceAlarms, previewDeviceAlarm} from './src/services/deviceAlarms';
-import LoginScreen from './src/screens/LoginScreen';
-import AlarmListScreen from './src/screens/AlarmListScreen';
-import AlarmDetailScreen from './src/screens/AlarmDetailScreen';
-import SettingsScreen from './src/screens/SettingsScreen';
-import JournalScreen from './src/screens/JournalScreen';
-import ChatScreen from './src/screens/ChatScreen';
-import GoalsScreen from './src/screens/GoalsScreen';
-import AnalyticsScreen from './src/screens/AnalyticsScreen';
+﻿import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, AppState, Button, StyleSheet, Text, View } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import {
+  MissingAccess,
+  accessExplanation,
+  cancelDeviceAlarm,
+  openAccessSettings,
+  readAlarmAccess,
+  requestAlarmAccess,
+  restoreDeviceAlarms,
+  scheduleDeviceAlarm,
+  scheduledAlarms,
+} from './src/services/deviceAlarms';
 
-const Stack = createStackNavigator();
-const Tab = createBottomTabNavigator();
+const ID = 'local-wake-up';
 
-const MainTabs = () => {
-  return (
-    <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: {
-          backgroundColor: '#0f3460',
-          borderTopWidth: 0,
-        },
-        tabBarActiveTintColor: '#e94560',
-        tabBarInactiveTintColor: '#999',
-      }}
-    >
-      <Tab.Screen
-        name="Alarms"
-        component={AlarmListScreen}
-        options={{
-          tabBarLabel: 'Alarms',
-        }}
-      />
-      <Tab.Screen
-        name="Chat"
-        component={ChatScreen}
-        options={{
-          tabBarLabel: 'Chat',
-        }}
-      />
-      <Tab.Screen
-        name="Journal"
-        component={JournalScreen}
-        options={{
-          tabBarLabel: 'Journal',
-        }}
-      />
-      <Tab.Screen
-        name="Goals"
-        component={GoalsScreen}
-        options={{
-          tabBarLabel: 'Goals',
-        }}
-      />
-      <Tab.Screen
-        name="Analytics"
-        component={AnalyticsScreen}
-        options={{
-          tabBarLabel: 'Stats',
-        }}
-      />
-      <Tab.Screen
-        name="Settings"
-        component={SettingsScreen}
-        options={{
-          tabBarLabel: 'Settings',
-        }}
-      />
-    </Tab.Navigator>
-  );
-};
+function clockTime(date: Date) {
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
 
-const AuthStack = () => {
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen name="Login" component={LoginScreen} />
-    </Stack.Navigator>
-  );
-};
+export default function App() {
+  const [time, setTime] = useState(new Date());
+  const [picker, setPicker] = useState(false);
+  const [next, setNext] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [missing, setMissing] = useState<MissingAccess | null>(null);
 
-const AppStack = () => {
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen name="Main" component={MainTabs} />
-      <Stack.Screen
-        name="AlarmDetail"
-        component={AlarmDetailScreen}
-        options={{
-          presentation: 'modal',
-        }}
-      />
-    </Stack.Navigator>
-  );
-};
-
-const App = () => {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [configured] = useState(() => firebaseAuth.isConfigured());
+  const refresh = useCallback(async () => {
+    setMissing(await readAlarmAccess());
+    const alarms = await scheduledAlarms();
+    const alarm = alarms.find(item => item.id === ID);
+    setNext(alarm?.snoozeAt || alarm?.nextAt || 0);
+    if (alarm) {
+      const [hour, minute] = alarm.time.split(':').map(Number);
+      const value = new Date();
+      value.setHours(hour, minute, 0, 0);
+      setTime(value);
+    }
+  }, []);
 
   useEffect(() => {
-    if (!configured) { setLoading(false); return; }
-    let mounted = true;
-    const unsubscribe = firebaseAuth.onAuthStateChanged(currentUser => {
-      setLoading(true);
-      restoreDeviceAlarms(currentUser?.uid || null).then(() => {
-        if (mounted) setUser(currentUser);
-      }).catch(error => Alert.alert('Alarm restore failed', error.message))
-        .finally(() => { if (mounted) setLoading(false); });
+    const load = async () => {
+      await restoreDeviceAlarms();
+      await refresh();
+    };
+    load().catch(() => Alert.alert('Alarm unavailable', 'Could not read this device’s alarm.'));
+    // Coming back from Android settings is the moment a permission may have changed.
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') load().catch(() => {});
     });
-    return () => { mounted = false; unsubscribe(); };
-  }, [configured]);
+    return () => subscription.remove();
+  }, [refresh]);
 
-  if (loading) return null;
-  if (!configured) {
-    return <View style={setupStyles.container}>
-      <Text style={setupStyles.title}>Waki needs account setup</Text>
-      <Text style={setupStyles.copy}>This build is not connected to sign-in yet. You can still try the alarm sound and voice controls.</Text>
-      <Button title="Try the alarm" onPress={() => previewDeviceAlarm().catch(error => Alert.alert('Preview unavailable', error.message))} />
-    </View>;
-  }
-  return <GestureHandlerRootView style={setupStyles.root}>
-    <NavigationContainer>{user ? <AppStack /> : <AuthStack />}</NavigationContainer>
-  </GestureHandlerRootView>;
-};
+  const save = async () => {
+    setBusy(true);
+    try {
+      const blocked = await requestAlarmAccess();
+      setMissing(blocked);
+      if (blocked) return;
+      await scheduleDeviceAlarm({
+        id: ID,
+        userId: 'local',
+        time: clockTime(time),
+        days: [],
+        enabled: true,
+        label: 'Wake up',
+        snoozeEnabled: true,
+        snoozeDuration: 10,
+      });
+      await refresh();
+    } catch (error) {
+      Alert.alert(
+        'Alarm not scheduled',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
 
-const setupStyles = StyleSheet.create({
-  root: {flex: 1},
-  container: {flex: 1, justifyContent: 'center', padding: 24, backgroundColor: '#1a1a2e'},
-  title: {fontSize: 24, color: '#fff', marginBottom: 16},
-  copy: {fontSize: 16, color: '#ddd', marginBottom: 24},
+  const cancel = async () => {
+    setBusy(true);
+    try {
+      await cancelDeviceAlarm(ID);
+      await refresh();
+    } catch {
+      Alert.alert('Could not cancel', 'Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <View style={styles.page}>
+      <View style={styles.content}>
+        <Text style={styles.eyebrow}>WAKI · ANDROID PROTOTYPE</Text>
+        <Text style={styles.title}>Wake up with a voice.</Text>
+        <Text style={styles.copy}>
+          Set one alarm on this phone. Waki rings, speaks a short greeting, and lets you stop or
+          snooze for 10 minutes.
+        </Text>
+        {missing && (
+          <View style={styles.warning} accessibilityRole="alert">
+            <Text style={styles.warningText}>{accessExplanation[missing]}</Text>
+            <Button title="Open settings" onPress={() => openAccessSettings(missing)} />
+          </View>
+        )}
+        <Text style={styles.label}>WAKE-UP TIME</Text>
+        <Text style={styles.time}>
+          {time.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+        </Text>
+        <Button title="Choose time" onPress={() => setPicker(true)} disabled={busy} />
+        {picker && (
+          <DateTimePicker
+            value={time}
+            mode="time"
+            onChange={(_, selected) => {
+              setPicker(false);
+              if (selected) setTime(selected);
+            }}
+          />
+        )}
+        <View style={styles.action}>
+          <Button title={busy ? 'Saving…' : 'Set alarm'} onPress={save} disabled={busy} />
+        </View>
+        <Text style={styles.status}>
+          {next > 0
+            ? `Scheduled for ${new Date(next).toLocaleString()}`
+            : 'No alarm scheduled yet.'}
+        </Text>
+        {next > 0 && <Button title="Cancel alarm" onPress={cancel} disabled={busy} />}
+        <Text style={styles.note}>
+          Waki only asks for what the alarm needs: alarms at an exact time, and notifications so
+          Stop and Snooze appear on your lock screen. The microphone is asked for only if you tap
+          Speak while it rings. Keep a backup alarm until you have tested Waki on your phone.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  page: { flex: 1, backgroundColor: '#171a2d' },
+  content: { flex: 1, padding: 28, justifyContent: 'center' },
+  eyebrow: { color: '#ffb99b', fontSize: 12, letterSpacing: 2, fontWeight: '700' },
+  title: { color: 'white', fontSize: 34, fontWeight: '700', marginTop: 12 },
+  copy: { color: '#d6d8e4', fontSize: 16, lineHeight: 24, marginTop: 12 },
+  warning: { backgroundColor: '#3a2a20', borderRadius: 10, padding: 14, marginTop: 20, gap: 10 },
+  warningText: { color: '#ffd9c7', fontSize: 15, lineHeight: 21 },
+  label: { color: '#b4b9cc', marginTop: 30, letterSpacing: 1 },
+  time: { color: 'white', fontSize: 42, marginVertical: 12 },
+  action: { marginTop: 14 },
+  status: { color: 'white', marginVertical: 18, fontSize: 16 },
+  note: { color: '#b4b9cc', marginTop: 24, lineHeight: 20 },
 });
-export default App;

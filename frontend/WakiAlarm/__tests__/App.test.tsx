@@ -1,48 +1,96 @@
-import React from 'react';
-import {Button} from 'react-native';
-import ReactTestRenderer, {act} from 'react-test-renderer';
-import {firebaseAuth} from '../src/services/firebase';
-import {previewDeviceAlarm, restoreDeviceAlarms} from '../src/services/deviceAlarms';
+﻿import React from 'react';
+import { Button, Text } from 'react-native';
+import ReactTestRenderer, { act } from 'react-test-renderer';
+import {
+  cancelDeviceAlarm,
+  openAccessSettings,
+  readAlarmAccess,
+  requestAlarmAccess,
+  restoreDeviceAlarms,
+  scheduleDeviceAlarm,
+  scheduledAlarms,
+} from '../src/services/deviceAlarms';
 import App from '../App';
 
-jest.mock('../src/services/firebase', () => ({firebaseAuth: {isConfigured: jest.fn(), onAuthStateChanged: jest.fn()}}));
-jest.mock('../src/services/deviceAlarms', () => ({previewDeviceAlarm: jest.fn().mockResolvedValue(undefined), restoreDeviceAlarms: jest.fn().mockResolvedValue(undefined)}));
-jest.mock('@react-navigation/native', () => ({NavigationContainer: ({children}: any) => children}));
-jest.mock('react-native-gesture-handler', () => ({GestureHandlerRootView: ({children}: any) => children}));
-jest.mock('@react-navigation/stack', () => ({createStackNavigator: () => ({Navigator: ({children}: any) => children, Screen: () => null})}));
-jest.mock('@react-navigation/bottom-tabs', () => ({createBottomTabNavigator: () => ({Navigator: ({children}: any) => children, Screen: () => null})}));
-jest.mock('../src/screens/LoginScreen', () => () => null);
-jest.mock('../src/screens/AlarmListScreen', () => () => null);
-jest.mock('../src/screens/AlarmDetailScreen', () => () => null);
-jest.mock('../src/screens/SettingsScreen', () => () => null);
-jest.mock('../src/screens/JournalScreen', () => () => null);
-jest.mock('../src/screens/ChatScreen', () => () => null);
-jest.mock('../src/screens/GoalsScreen', () => () => null);
-jest.mock('../src/screens/AnalyticsScreen', () => () => null);
+jest.mock('../src/services/deviceAlarms', () => ({
+  ...jest.requireActual('../src/services/deviceAlarms'),
+  cancelDeviceAlarm: jest.fn(),
+  openAccessSettings: jest.fn(),
+  readAlarmAccess: jest.fn(),
+  requestAlarmAccess: jest.fn(),
+  restoreDeviceAlarms: jest.fn(),
+  scheduleDeviceAlarm: jest.fn(),
+  scheduledAlarms: jest.fn(),
+}));
 
-beforeEach(() => jest.clearAllMocks());
+const list = scheduledAlarms as jest.Mock;
 
-test('unconfigured account service leaves a usable local alarm preview', async () => {
-  (firebaseAuth.isConfigured as jest.Mock).mockReturnValue(false);
+beforeEach(() => {
+  jest.clearAllMocks();
+  list.mockResolvedValue([]);
+  (readAlarmAccess as jest.Mock).mockResolvedValue(null);
+  (requestAlarmAccess as jest.Mock).mockResolvedValue(null);
+});
+
+async function render() {
   let tree!: ReactTestRenderer.ReactTestRenderer;
-  await act(async () => { tree = ReactTestRenderer.create(<App />); });
-  expect(firebaseAuth.onAuthStateChanged).not.toHaveBeenCalled();
-  await act(async () => { tree.root.findByType(Button).props.onPress(); });
-  expect(previewDeviceAlarm).toHaveBeenCalledTimes(1);
+  await act(async () => {
+    tree = ReactTestRenderer.create(<App />);
+  });
+  return tree;
+}
+
+const texts = (tree: ReactTestRenderer.ReactTestRenderer) =>
+  tree.root.findAllByType(Text).map(node => node.props.children);
+
+async function press(tree: ReactTestRenderer.ReactTestRenderer, title: string) {
+  await act(async () => {
+    await tree.root
+      .findAllByType(Button)
+      .find(node => node.props.title === title)!
+      .props.onPress();
+  });
+}
+
+test('opening the app re-arms saved alarms', async () => {
+  const tree = await render();
+  expect(restoreDeviceAlarms).toHaveBeenCalledTimes(1);
   await act(async () => tree.unmount());
 });
 
-test('auth restoration restores device alarms and logout clears their owner', async () => {
-  (firebaseAuth.isConfigured as jest.Mock).mockReturnValue(true);
-  let notify!: (user: any) => void;
-  const unsubscribe = jest.fn();
-  (firebaseAuth.onAuthStateChanged as jest.Mock).mockImplementation(callback => { notify = callback; return unsubscribe; });
-  let tree!: ReactTestRenderer.ReactTestRenderer;
-  await act(async () => { tree = ReactTestRenderer.create(<App />); });
-  await act(async () => notify({uid: 'alice'}));
-  expect(restoreDeviceAlarms).toHaveBeenLastCalledWith('alice');
-  await act(async () => notify(null));
-  expect(restoreDeviceAlarms).toHaveBeenLastCalledWith(null);
+test('a stranger can set and cancel a local alarm', async () => {
+  const tree = await render();
+  expect(texts(tree)).toContain('No alarm scheduled yet.');
+
+  list.mockResolvedValue([{ id: 'local-wake-up', time: '07:00', nextAt: 2000000000000 }]);
+  await press(tree, 'Set alarm');
+  expect(scheduleDeviceAlarm).toHaveBeenCalledWith(
+    expect.objectContaining({ id: 'local-wake-up', days: [], snoozeDuration: 10 }),
+  );
+  expect(texts(tree).some(text => String(text).startsWith('Scheduled for'))).toBe(true);
+
+  list.mockResolvedValue([]);
+  await press(tree, 'Cancel alarm');
+  expect(cancelDeviceAlarm).toHaveBeenCalledWith('local-wake-up');
+  expect(texts(tree)).toContain('No alarm scheduled yet.');
   await act(async () => tree.unmount());
-  expect(unsubscribe).toHaveBeenCalledTimes(1);
+});
+
+test('missing exact-alarm access is explained up front and links to settings', async () => {
+  (readAlarmAccess as jest.Mock).mockResolvedValue('exact');
+  const tree = await render();
+  expect(texts(tree).some(text => String(text).includes('Alarms & reminders'))).toBe(true);
+  await press(tree, 'Open settings');
+  expect(openAccessSettings).toHaveBeenCalledWith('exact');
+  await act(async () => tree.unmount());
+});
+
+test('a permission failure never schedules an alarm', async () => {
+  (requestAlarmAccess as jest.Mock).mockResolvedValue('notifications');
+  const tree = await render();
+  await press(tree, 'Set alarm');
+  expect(scheduleDeviceAlarm).not.toHaveBeenCalled();
+  expect(texts(tree)).toContain('No alarm scheduled yet.');
+  expect(texts(tree).some(text => String(text).includes('Notifications are off'))).toBe(true);
+  await act(async () => tree.unmount());
 });
