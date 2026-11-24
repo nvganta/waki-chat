@@ -1,4 +1,4 @@
-import heroImage from "@/assets/waki-hero-image.jpg";
+﻿import heroImage from "@/assets/waki-hero-image.jpg";
 import { Smartphone } from "lucide-react";
 const Hero = () => {
   return <section className="min-h-screen bg-gradient-hero relative overflow-hidden flex items-center">
@@ -17,7 +17,7 @@ const Hero = () => {
                 </span>
               </h1>
               <p className="text-xl lg:text-2xl text-primary-foreground/90 max-w-lg">
-                A talking-alarm prototype with a personal wake-up style. Calendar and news briefings are planned.
+                An Android alarm prototype that rings and speaks a short greeting. Set a time, then stop or snooze when it rings.
               </p>
             </div>
 
@@ -29,7 +29,7 @@ const Hero = () => {
           <div className="relative">
             <div className="relative group">
               <div className="absolute -inset-4 bg-gradient-to-r from-sunrise-mid to-sunrise-end rounded-3xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
-              <img src={heroImage} alt="Waki Alarm morning assistant interface on smartphone" className="relative w-full max-w-md mx-auto rounded-3xl shadow-2xl" />
+              <img src={heroImage} alt="Illustration of a morning alarm on a smartphone" className="relative w-full max-w-md mx-auto rounded-3xl shadow-2xl" />
             </div>
             
             {/* Floating Elements */}
