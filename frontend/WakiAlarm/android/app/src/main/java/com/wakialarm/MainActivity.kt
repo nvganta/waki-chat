@@ -10,7 +10,6 @@ class MainActivity : ReactActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     // The process may have started before the first unlock to ring an alarm, without React Native.
     (application as MainApplication).ensureReactNative()
-    supportFragmentManager.fragmentFactory = com.swmansion.rnscreens.fragment.restoration.RNScreensFragmentFactory()
     super.onCreate(savedInstanceState)
   }
 
