@@ -1,16 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import alarmRoutes from './routes/alarm.routes';
-import preferencesRoutes from './routes/preferences.routes';
-import aiRoutes from './routes/ai.routes';
-import authRoutes from './routes/auth.routes';
-import journalRoutes from './routes/journal.routes';
-import vapiRoutes from './routes/vapi.routes';
-import voiceJournalRoutes from './routes/voiceJournal.routes';
-import goalsRoutes from './routes/goals.routes';
-import analyticsRoutes from './routes/analytics.routes';
-import { initializeSchema } from './config/weaviate';
 import path from 'path';
 
 dotenv.config();
@@ -34,16 +24,22 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/alarms', alarmRoutes);
-app.use('/api/preferences', preferencesRoutes);
-app.use('/api/ai', aiRoutes);
-app.use('/api/journal', journalRoutes);
-app.use('/api/vapi', vapiRoutes);
-app.use('/api/voice-journal', voiceJournalRoutes);
-app.use('/api/goals', goalsRoutes);
-app.use('/api/analytics', analyticsRoutes);
+// The legacy API is optional and is not used by the local Android alarm.
+const configured = ['FIREBASE_PROJECT_ID', 'FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY', 'OPENAI_API_KEY']
+  .every(name => Boolean(process.env[name]));
+if (configured) {
+  app.use('/api/auth', require('./routes/auth.routes').default);
+  app.use('/api/alarms', require('./routes/alarm.routes').default);
+  app.use('/api/preferences', require('./routes/preferences.routes').default);
+  app.use('/api/ai', require('./routes/ai.routes').default);
+  app.use('/api/journal', require('./routes/journal.routes').default);
+  app.use('/api/vapi', require('./routes/vapi.routes').default);
+  app.use('/api/voice-journal', require('./routes/voiceJournal.routes').default);
+  app.use('/api/goals', require('./routes/goals.routes').default);
+  app.use('/api/analytics', require('./routes/analytics.routes').default);
+} else {
+  app.use('/api', (_req, res) => res.status(503).json({ error: 'Backend providers are not configured.' }));
+}
 
 // Error handling middleware
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
@@ -58,10 +54,10 @@ app.use((_req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-app.listen(PORT, async () => {
+app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📍 Health check: http://localhost:${PORT}/health`);
   
-  // Initialize Weaviate schema
-  await initializeSchema();
+  if (!configured) console.log('Backend providers are not configured; local Android alarms do not need them.');
+  else void require('./config/weaviate').initializeSchema();
 });
