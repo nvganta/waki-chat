@@ -9,10 +9,10 @@ export class AlarmController {
       const alarmData = req.body;
 
       const alarm = await alarmService.createAlarm(userId, alarmData);
-      res.status(201).json(alarm);
+      return res.status(201).json(alarm);
     } catch (error) {
       console.error('Error creating alarm:', error);
-      res.status(500).json({ error: 'Failed to create alarm' });
+      return res.status(500).json({ error: 'Failed to create alarm' });
     }
   }
 
@@ -20,10 +20,10 @@ export class AlarmController {
     try {
       const userId = req.userId!;
       const alarms = await alarmService.getAlarmsByUser(userId);
-      res.json(alarms);
+      return res.json(alarms);
     } catch (error) {
       console.error('Error fetching alarms:', error);
-      res.status(500).json({ error: 'Failed to fetch alarms' });
+      return res.status(500).json({ error: 'Failed to fetch alarms' });
     }
   }
 
@@ -41,10 +41,10 @@ export class AlarmController {
         return res.status(403).json({ error: 'Forbidden' });
       }
 
-      res.json(alarm);
+      return res.json(alarm);
     } catch (error) {
       console.error('Error fetching alarm:', error);
-      res.status(500).json({ error: 'Failed to fetch alarm' });
+      return res.status(500).json({ error: 'Failed to fetch alarm' });
     }
   }
 
@@ -63,10 +63,10 @@ export class AlarmController {
       }
 
       const alarm = await alarmService.updateAlarm(id, updates);
-      res.json(alarm);
+      return res.json(alarm);
     } catch (error) {
       console.error('Error updating alarm:', error);
-      res.status(500).json({ error: 'Failed to update alarm' });
+      return res.status(500).json({ error: 'Failed to update alarm' });
     }
   }
 
@@ -88,10 +88,10 @@ export class AlarmController {
         return res.status(404).json({ error: 'Alarm not found' });
       }
 
-      res.status(204).send();
+      return res.status(204).send();
     } catch (error) {
       console.error('Error deleting alarm:', error);
-      res.status(500).json({ error: 'Failed to delete alarm' });
+      return res.status(500).json({ error: 'Failed to delete alarm' });
     }
   }
 }

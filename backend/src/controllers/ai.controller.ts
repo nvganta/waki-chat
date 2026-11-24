@@ -5,11 +5,20 @@ import { weatherService } from '../services/weather.service';
 import { alarmService } from '../services/alarm.service';
 import multer from 'multer';
 import fs from 'fs';
-import path from 'path';
 
 const upload = multer({ dest: 'temp/' });
 
 export class AIController {
+  async prepareAlarmMessage(req: AuthRequest, res: Response) {
+    try {
+      const preferences = await alarmService.getUserPreferences(req.userId!);
+      if (!preferences) return res.status(404).json({error: 'User preferences not found'});
+      return res.json({message: await aiService.prepareAlarmMessage(preferences)});
+    } catch {
+      return res.status(500).json({error: 'Failed to prepare alarm message'});
+    }
+  }
+
   async generateWakeUpMessage(req: AuthRequest, res: Response) {
     try {
       const userId = req.userId!;
@@ -33,10 +42,10 @@ export class AIController {
         preferences
       );
 
-      res.json({ message, weather });
+      return res.json({ message, weather });
     } catch (error) {
       console.error('Error generating wake-up message:', error);
-      res.status(500).json({ error: 'Failed to generate wake-up message' });
+      return res.status(500).json({ error: 'Failed to generate wake-up message' });
     }
   }
 
@@ -57,10 +66,10 @@ export class AIController {
         'Content-Length': audioBuffer.length.toString(),
       });
 
-      res.send(audioBuffer);
+      return res.send(audioBuffer);
     } catch (error) {
       console.error('Error generating audio:', error);
-      res.status(500).json({ error: 'Failed to generate audio' });
+      return res.status(500).json({ error: 'Failed to generate audio' });
     }
   }
 
@@ -84,7 +93,7 @@ export class AIController {
           action = 'snooze';
         }
 
-        res.json({ transcription, action });
+        return res.json({ transcription, action });
       } finally {
         // Clean up the temporary file
         if (fs.existsSync(audioPath)) {
@@ -93,7 +102,7 @@ export class AIController {
       }
     } catch (error) {
       console.error('Error processing voice command:', error);
-      res.status(500).json({ error: 'Failed to process voice command' });
+      return res.status(500).json({ error: 'Failed to process voice command' });
     }
   }
 
@@ -124,14 +133,14 @@ export class AIController {
       const audioBuffer = await aiService.generateAudioFromText(message);
 
       // Send as base64 for easy testing
-      res.json({
+      return res.json({
         message,
         weather,
         audio: audioBuffer.toString('base64'),
       });
     } catch (error) {
       console.error('Error testing alarm:', error);
-      res.status(500).json({ error: 'Failed to test alarm' });
+      return res.status(500).json({ error: 'Failed to test alarm' });
     }
   }
 }

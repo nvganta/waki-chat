@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { alarmService } from '../services/alarm.service';
+import { isWakeUpStyle } from '../services/wake-style';
 
 export class PreferencesController {
   async getPreferences(req: AuthRequest, res: Response) {
@@ -15,16 +16,17 @@ export class PreferencesController {
           name: 'User',
           location: { city: 'New York', country: 'US' },
           voiceStyle: 'friendly',
+          wakeUpStyle: 'moderate',
           includeWeather: true,
           includeNews: false,
           newsTopics: [],
         });
       }
 
-      res.json(preferences);
+      return res.json(preferences);
     } catch (error) {
       console.error('Error fetching preferences:', error);
-      res.status(500).json({ error: 'Failed to fetch preferences' });
+      return res.status(500).json({ error: 'Failed to fetch preferences' });
     }
   }
 
@@ -32,12 +34,15 @@ export class PreferencesController {
     try {
       const userId = req.userId!;
       const updates = req.body;
+      if (updates?.wakeUpStyle !== undefined && !isWakeUpStyle(updates.wakeUpStyle)) {
+        return res.status(400).json({ error: 'wakeUpStyle must be gentle, moderate, or assertive' });
+      }
 
       const preferences = await alarmService.updateUserPreferences(userId, updates);
-      res.json(preferences);
+      return res.json(preferences);
     } catch (error) {
       console.error('Error updating preferences:', error);
-      res.status(500).json({ error: 'Failed to update preferences' });
+      return res.status(500).json({ error: 'Failed to update preferences' });
     }
   }
 }

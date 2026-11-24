@@ -11,10 +11,10 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { alarmAPI } from '../services/api';
-import { Alarm } from '../types';
+import {ensureAlarmAccess, scheduleDeviceAlarm} from '../services/deviceAlarms';
 
 const AlarmDetailScreen = ({ navigation, route }: any) => {
-  const alarmId = route.params?.alarmId;
+  const [alarmId, setAlarmId] = useState(route.params?.alarmId);
   const [time, setTime] = useState(new Date());
   const [label, setLabel] = useState('Wake up');
   const [days, setDays] = useState<number[]>([1, 2, 3, 4, 5]); // Weekdays by default
@@ -23,35 +23,28 @@ const AlarmDetailScreen = ({ navigation, route }: any) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (alarmId) {
-      fetchAlarm();
-    }
-  }, [alarmId]);
-
-  const fetchAlarm = async () => {
-    try {
-      const response = await alarmAPI.getAlarm(alarmId);
-      const alarm = response.data;
-      
-      // Parse time string to Date
-      const [hours, minutes] = alarm.time.split(':');
+    if (!route.params?.alarmId) return;
+    let cancelled = false;
+    setLoading(true);
+    alarmAPI.getAlarm(route.params.alarmId).then(({data: alarm}) => {
+      if (cancelled) return;
+      const [hours, minutes] = alarm.time.split(':').map(Number);
       const date = new Date();
-      date.setHours(parseInt(hours), parseInt(minutes));
-      
+      date.setHours(hours, minutes, 0, 0);
       setTime(date);
       setLabel(alarm.label);
       setDays(alarm.days);
       setSnoozeEnabled(alarm.snoozeEnabled);
       setSnoozeDuration(alarm.snoozeDuration);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to load alarm');
-      navigation.goBack();
-    }
-  };
-
+    }).catch(() => {
+      if (!cancelled) { Alert.alert('Error', 'Failed to load alarm'); navigation.goBack(); }
+    }).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [route.params?.alarmId, navigation]);
   const handleSave = async () => {
     setLoading(true);
     try {
+      await ensureAlarmAccess();
       const alarmData = {
         time: `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`,
         label,
@@ -61,15 +54,15 @@ const AlarmDetailScreen = ({ navigation, route }: any) => {
         snoozeDuration,
       };
 
-      if (alarmId) {
-        await alarmAPI.updateAlarm(alarmId, alarmData);
-      } else {
-        await alarmAPI.createAlarm(alarmData);
-      }
+      const response = alarmId
+        ? await alarmAPI.updateAlarm(alarmId, alarmData)
+        : await alarmAPI.createAlarm(alarmData);
+      setAlarmId(response.data.id);
+      await scheduleDeviceAlarm(response.data);
 
       navigation.goBack();
     } catch (error) {
-      Alert.alert('Error', 'Failed to save alarm');
+      Alert.alert('Alarm not scheduled', error instanceof Error ? error.message : 'Could not schedule this alarm. Please retry.');
     } finally {
       setLoading(false);
     }
@@ -84,12 +77,11 @@ const AlarmDetailScreen = ({ navigation, route }: any) => {
   };
 
   const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-  const fullDayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity disabled={loading} onPress={() => navigation.goBack()}>
           <Text style={styles.headerButton}>Cancel</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{alarmId ? 'Edit Alarm' : 'New Alarm'}</Text>

@@ -5,8 +5,21 @@ import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { getFriendliCompletion } from './friendli.service';
+import { wakeUpInstructions } from './wake-style';
 
 export class AIService {
+  async prepareAlarmMessage(preferences: UserPreferences): Promise<string> {
+    try {
+      return await getFriendliCompletion(`Write a short wake-up greeting for ${preferences.name}.
+        ${wakeUpInstructions(preferences.wakeUpStyle)}
+        This message will be saved on their phone and spoken at a future alarm.
+        Do not mention the time, date, day of week, weather, news, or other changing facts.
+        Use at most two sentences. Return only the words to speak.`);
+    } catch {
+      return `Good morning, ${preferences.name || 'friend'}. Take a breath and start your day.`;
+    }
+  }
+
   async generateWakeUpMessage(
     userName: string,
     weather: WeatherData,
@@ -37,7 +50,8 @@ export class AIService {
     Date: ${dateString}
     Weather in ${weather.city}: ${weather.temperature}°C, ${weather.description}
     
-    Style: Be ${voiceStyles[preferences.voiceStyle]}. 
+    Style: Be ${voiceStyles[preferences.voiceStyle]}.
+    Wake-up approach: ${wakeUpInstructions(preferences.wakeUpStyle)}
     Keep it concise (2-3 sentences max).
     Include the time, a greeting, and weather information.
     Make it natural and conversational, as if a friendly assistant is waking them up.`;

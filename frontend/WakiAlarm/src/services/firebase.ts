@@ -1,8 +1,9 @@
 import auth from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
+import firebase from '@react-native-firebase/app';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const firebaseAuth = {
+  isConfigured: () => firebase.apps.length > 0,
   signIn: async (email: string, password: string) => {
     try {
       const userCredential = await auth().signInWithEmailAndPassword(email, password);
@@ -52,5 +53,3 @@ export const firebaseAuth = {
     return null;
   },
 };
-
-export const db = firestore();

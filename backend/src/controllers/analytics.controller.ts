@@ -11,10 +11,10 @@ export class AnalyticsController {
 
       const dashboardData = await analyticsService.getDashboardData(req.user.uid);
 
-      res.json(dashboardData);
+      return res.json(dashboardData);
     } catch (error) {
       console.error('Error getting dashboard data:', error);
-      res.status(500).json({ error: 'Failed to get dashboard data' });
+      return res.status(500).json({ error: 'Failed to get dashboard data' });
     }
   }
 
@@ -35,10 +35,10 @@ export class AnalyticsController {
         res.setHeader('Content-Disposition', 'attachment; filename=analytics.json');
       }
 
-      res.send(data);
+      return res.send(data);
     } catch (error) {
       console.error('Error exporting analytics:', error);
-      res.status(500).json({ error: 'Failed to export analytics' });
+      return res.status(500).json({ error: 'Failed to export analytics' });
     }
   }
 }

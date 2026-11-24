@@ -166,6 +166,26 @@ const SettingsScreen = ({ navigation }: any) => {
           </View>
         </View>
 
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Wake-up Approach</Text>
+          <View style={styles.voiceStyles}>
+            {(['gentle', 'moderate', 'assertive'] as const).map((value) => (
+              <TouchableOpacity
+                key={value}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: (preferences.wakeUpStyle || 'moderate') === value }}
+                accessibilityLabel={value}
+                style={[styles.voiceStyleButton, (preferences.wakeUpStyle || 'moderate') === value && styles.voiceStyleActive]}
+                onPress={() => setPreferences({ ...preferences, wakeUpStyle: value })}
+              >
+                <Text style={[styles.voiceStyleText, (preferences.wakeUpStyle || 'moderate') === value && styles.voiceStyleTextActive]}>
+                  {value.charAt(0).toUpperCase() + value.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
         <TouchableOpacity
           style={[styles.button, styles.saveButton]}
           onPress={handleSave}

@@ -30,13 +30,13 @@ export class GoalsController {
         linkedJournalEntries: [],
       });
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         goalId,
       });
     } catch (error) {
       console.error('Error creating goal:', error);
-      res.status(500).json({ error: 'Failed to create goal' });
+      return res.status(500).json({ error: 'Failed to create goal' });
     }
   }
 
@@ -49,10 +49,10 @@ export class GoalsController {
       const includeCompleted = req.query.includeCompleted === 'true';
       const goals = await goalsService.getGoals(req.user.uid, includeCompleted);
 
-      res.json(goals);
+      return res.json(goals);
     } catch (error) {
       console.error('Error fetching goals:', error);
-      res.status(500).json({ error: 'Failed to fetch goals' });
+      return res.status(500).json({ error: 'Failed to fetch goals' });
     }
   }
 
@@ -76,7 +76,7 @@ export class GoalsController {
         milestoneId
       );
 
-      res.json({ success: true, message: 'Goal progress updated' });
+      return res.json({ success: true, message: 'Goal progress updated' });
     } catch (error: any) {
       console.error('Error updating goal progress:', error);
       
@@ -84,7 +84,7 @@ export class GoalsController {
         return res.status(403).json({ error: error.message });
       }
       
-      res.status(500).json({ error: 'Failed to update goal progress' });
+      return res.status(500).json({ error: 'Failed to update goal progress' });
     }
   }
 
@@ -103,10 +103,10 @@ export class GoalsController {
 
       await goalsService.linkJournalEntry(req.user.uid, goalId, journalEntryId);
 
-      res.json({ success: true, message: 'Journal entry linked to goal' });
+      return res.json({ success: true, message: 'Journal entry linked to goal' });
     } catch (error) {
       console.error('Error linking journal entry:', error);
-      res.status(500).json({ error: 'Failed to link journal entry' });
+      return res.status(500).json({ error: 'Failed to link journal entry' });
     }
   }
 
@@ -123,10 +123,10 @@ export class GoalsController {
         recentContent || ''
       );
 
-      res.json({ suggestions });
+      return res.json({ suggestions });
     } catch (error) {
       console.error('Error getting goal suggestions:', error);
-      res.status(500).json({ error: 'Failed to get goal suggestions' });
+      return res.status(500).json({ error: 'Failed to get goal suggestions' });
     }
   }
 
@@ -140,7 +140,7 @@ export class GoalsController {
 
       await goalsService.deleteGoal(req.user.uid, goalId);
 
-      res.json({ success: true, message: 'Goal deleted successfully' });
+      return res.json({ success: true, message: 'Goal deleted successfully' });
     } catch (error: any) {
       console.error('Error deleting goal:', error);
       
@@ -148,7 +148,7 @@ export class GoalsController {
         return res.status(403).json({ error: error.message });
       }
       
-      res.status(500).json({ error: 'Failed to delete goal' });
+      return res.status(500).json({ error: 'Failed to delete goal' });
     }
   }
 
@@ -160,10 +160,10 @@ export class GoalsController {
 
       const progress = await goalsService.getGoalProgress(req.user.uid);
 
-      res.json(progress);
+      return res.json(progress);
     } catch (error) {
       console.error('Error getting goal progress:', error);
-      res.status(500).json({ error: 'Failed to get goal progress' });
+      return res.status(500).json({ error: 'Failed to get goal progress' });
     }
   }
 }

@@ -1,10 +1,6 @@
-export const API_URL = __DEV__ 
-  ? 'http://localhost:3000' 
-  : 'https://api.waki-chat.com';
-
-export const VAPI_CONFIG = {
-  publicKey: process.env.VAPI_PUBLIC_KEY || '',
-};
+export const API_URL = __DEV__
+  ? 'http://127.0.0.1:3000' // USB: adb reverse tcp:3000 tcp:3000
+  : ''; // Set a verified backend URL before distributing a connected release build
 
 export const APP_CONFIG = {
   appName: 'Waki Chat',

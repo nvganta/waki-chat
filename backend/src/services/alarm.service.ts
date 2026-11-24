@@ -72,6 +72,7 @@ export class AlarmService {
         name: preferences.name || 'User',
         location: preferences.location || { city: 'New York', country: 'US' },
         voiceStyle: preferences.voiceStyle || 'friendly',
+        wakeUpStyle: preferences.wakeUpStyle || 'moderate',
         includeWeather: preferences.includeWeather ?? true,
         includeNews: preferences.includeNews ?? false,
         newsTopics: preferences.newsTopics || [],

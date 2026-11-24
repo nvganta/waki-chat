@@ -1,3 +1,4 @@
+import { getFriendliCompletion } from './friendli.service';
 import { firestore } from '../config/firebase';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -146,9 +147,9 @@ export class GoalsService {
     }
   }
 
-  async getGoalSuggestions(userId: string, recentJournalContent: string): Promise<string[]> {
+  async getGoalSuggestions(_userId: string, recentJournalContent: string): Promise<string[]> {
     try {
-      const { getFriendliCompletion } = require('./friendli.service');
+
       
       const prompt = `Based on this journal content, suggest 3 SMART goals that would benefit this person.
       Make them specific, measurable, achievable, relevant, and time-bound.
