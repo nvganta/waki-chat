@@ -70,3 +70,8 @@ coverage/
 .env.*
 !.env.example
 !.env.*.example
+
+# Local polish evidence and package cache
+.polish-evidence/
+.npm-cache/
+.gradle-cache/

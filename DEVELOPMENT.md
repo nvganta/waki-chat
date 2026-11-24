@@ -35,7 +35,7 @@ frontend/WakiAlarm: canonical React Native Android app; backend: Express/TypeScr
 
 ## Next verification
 
-Connect the user's Android phone, configure the intended Firebase project, then verify scheduling, locked-screen ringing, snooze, stop and microphone interaction.
+Install the release APK on an Android phone and run DEVICE-TEST.md: scheduling, reboot before unlock, locked-screen ringing, snooze, stop and the spoken command. Firebase is no longer needed by the app.
 
 ## Repository check
 

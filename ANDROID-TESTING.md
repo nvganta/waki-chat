@@ -1,66 +1,38 @@
 # Android alarm flow
 
-The active mobile application is `frontend/WakiAlarm`. The older `frontend/src` tree is preserved source, not the build receiving the new native alarm implementation.
+The app is `frontend/WakiAlarm`. It has one screen: pick a time, tap Set alarm, and the phone rings at that time with a spoken greeting. No account, no backend and no network are needed. The older `frontend/src` tree is preserved source and is not built.
 
-## Implemented
+## How the alarm works
 
-- Saving/enabling an alarm schedules it with Android AlarmManager after checking exact-alarm, notification, and full-screen access. Disabling/deleting cancels the device schedule. Failed native scheduling is reported, and retrying a newly saved alarm reuses its ID.
-- The list distinguishes locally scheduled alarms from server records and reads local schedules when offline. Empty repeat days mean one occurrence.
-- A foreground alarm service plays the system alarm tone, speaks a saved greeting with the selected pacing, then resumes ringing. It stops unattended playback after ten minutes.
-- The native ringing screen and notification offer Stop/Snooze. “Speak a command” requests microphone permission and accepts explicit English stop/snooze commands. It does not continuously listen. Speech recognition availability/network requirements depend on the phone's recognition service; buttons remain available.
-- Schedules and snooze timestamps are persisted. A boot/time-change receiver restores future schedules after unlock. One-time alarms are consumed when delivered; repeating alarms schedule their next occurrence. Missed occurrences while the phone was off are skipped. Signing out or changing accounts clears that account's local alarms.
-- A new authenticated backend endpoint, `GET /api/ai/alarm-message`, prepares a greeting without changing time/weather facts. The greeting is generated when saving, not while ringing. Native TTS speaks the current device time and saved greeting. If preparation fails, a local greeting is saved. Edit/save an alarm to refresh its greeting after changing preferences.
+- **Scheduling.** Set alarm stores the alarm on the phone and hands it to Android with `AlarmManager.setAlarmClock`. That is the API the system clock app uses: it ignores Doze and battery saver and shows the alarm icon in the status bar.
+- **Exact-alarm access.** On Android 13 and later the app declares `USE_EXACT_ALARM`, which alarm-clock apps receive at install and which cannot be revoked. On Android 12 and 12L it uses `SCHEDULE_EXACT_ALARM`, which the user can turn off. If it is off, the home screen says so in plain words with an Open settings button, and the app never reports an alarm as scheduled. Granting it again re-arms saved alarms.
+- **Notifications and full-screen alarms.** The ringing screen is shown through a full-screen notification, so the app asks for notifications (Android 13+) when you first tap Set alarm, and checks full-screen alarm access (Android 14+). The microphone is asked for only when you tap Speak a command while it rings.
+- **Ringing.** A foreground service plays your phone's alarm sound. If that sound is set to None, cannot be read, or fails while playing, it plays a tone bundled in the app instead. After a couple of seconds the phone's text-to-speech says the time and "Good morning. Time to wake up." and then the sound resumes. If text-to-speech is missing or fails, the sound just keeps going. Unattended ringing stops after ten minutes.
+- **Stop, Snooze, Speak.** The ringing screen and the notification have Stop and a ten-minute Snooze. Speak a command listens once for an exact English "stop" or "snooze". Phrases like "don't stop" are ignored.
+- **Reboot.** Alarms live in device-protected storage and the alarm components are direct-boot aware, so after `LOCKED_BOOT_COMPLETED` the alarm is re-armed and can ring even if nobody has unlocked the phone since the restart. Before that first unlock the phone's own alarm sound and text-to-speech may be unavailable, in which case you hear the bundled tone. A one-time alarm that came due while the phone was off is dropped; a repeating one moves to its next day.
+- **Clock and time-zone changes.** On `TIME_SET` and `TIMEZONE_CHANGED` every alarm is recomputed for its wall-clock time in the new local time, so 07:00 stays 07:00 after you fly or after daylight saving time changes. A pending snooze keeps its absolute time.
+- **Force stop.** Android cancels every alarm of a force-stopped app. Opening Waki again re-arms them.
 
-This alarm flow uses Android TTS and speech recognition. The separate Vapi Chat screen remains unfinished and is not used to ring or snooze alarms.
+## Checks on this computer
 
-## Verified on this computer
+`frontend/WakiAlarm/android/gradlew.bat :app:testDebugUnitTest :app:assembleDebug` runs the JVM rule tests (next occurrence, daylight saving time, time-zone changes, reboot rescheduling, stale deliveries, fallback tone choice, voice commands) and builds the debug APK. They do not simulate Android's process lifecycle, so the phone script still matters. LOG.md has the dated results.
 
-- Backend strict TypeScript build and 17 offline tests pass.
-- Mobile TypeScript and lint checks on changed screens/services pass; 10 Jest tests pass.
-- Android native compilation and 7 JVM alarm-rule tests pass.
-- Debug APK packaging passes for arm64-v8a and x86_64.
-- Metro Android JavaScript bundle generation passes.
+## Install on a phone
 
-No physical phone or emulator was connected. Audio, microphone recognition, lock-screen delivery, persistence across device reboot, and the live authenticated flow are **not yet device-verified**. The JVM tests cover recurrence/validation/command parsing; they do not simulate Android's process lifecycle.
+The debug APK (`frontend/WakiAlarm/android/app/build/outputs/apk/debug/app-debug.apk`) loads its JavaScript from Metro on this computer. The release APK (`.../apk/release/app-release.apk`, built with `gradlew.bat :app:assembleRelease`; add `-PreactNativeArchitectures=arm64-v8a` for a faster build that covers almost every current phone) contains everything and runs without the computer. It is signed with the public debug key, so it is for testing only. Use the release APK for the phone script, because the reboot step needs the app to open without a USB cable.
 
-## Connect and run
-
-The debug APK is `frontend/WakiAlarm/android/app/build/outputs/apk/debug/app-debug.apk`. It requires Metro on this computer; it is not a standalone production release.
-
-1. Connect the Android phone by USB, enable USB debugging, and accept the computer authorization on the phone.
-2. From `frontend/WakiAlarm`, run `npm start` in a terminal.
-3. With Android platform-tools on PATH, run:
+1. On the phone, enable Developer options and USB debugging, connect it by USB and accept the prompt.
+2. From `frontend/WakiAlarm`, with Android platform-tools on PATH:
 
    ```powershell
    adb devices
-   adb reverse tcp:8081 tcp:8081
-   adb reverse tcp:3000 tcp:3000
-   adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+   adb install -r android/app/build/outputs/apk/release/app-release.apk
    ```
 
-4. Open Waki. This checkout does not contain `android/app/google-services.json`, so it shows an account-setup screen with “Try the alarm.” Grant the requested Android alarm permissions, return, and retry. This preview rings and supports Stop/voice Stop; it intentionally does not schedule or snooze an alarm.
-5. To test saved alarms, add the correct Firebase Android config for package `com.wakialarm` to `frontend/WakiAlarm/android/app/google-services.json`, enable the intended authentication provider, and rebuild. The Google Services plugin is applied when that file exists. The Firebase project must match the backend. Configure/start the backend using its setup instructions. The debug API URL is `http://127.0.0.1:3000`, reached over the USB reverse mapping. Release API requests fail explicitly until a verified URL is set in `src/config.ts`.
+3. Open Waki and follow [DEVICE-TEST.md](DEVICE-TEST.md).
 
-Firebase configuration setup: [official guide](https://firebase.google.com/docs/android/setup).
+To watch what the alarm does, run `adb logcat -s WakiAlarm` while testing. Every broadcast, ring, ignored stale delivery and sound choice is logged under that tag.
 
-## Physical-device acceptance checks
+For the debug APK instead, run `npm start` in `frontend/WakiAlarm`, then `adb reverse tcp:8081 tcp:8081` before opening the app.
 
-For each check, record phone model, Android version, permissions, expected time, actual time, and result.
-
-| Check | Expected result |
-|---|---|
-| Preview with network unavailable | Alarm tone, local greeting, and Stop button work |
-| One-time alarm two minutes ahead | Rings at that local minute and does not recur next day |
-| Screen locked; app backgrounded | Alarm screen/notification appears and audio plays |
-| Tap Snooze | Audio stops, new timestamp persists, alarm rings again |
-| Say “stop” or “snooze” after tapping Speak | Corresponding action occurs; unavailable mic/recognition leaves buttons usable |
-| Say “don't stop” | Alarm is not dismissed |
-| Close/reopen the app while snoozed | Snoozed timestamp is retained |
-| Reboot and unlock before the next alarm | Future alarm/snooze is restored and fires |
-| Disable or delete an alarm | No later ring from that alarm |
-| Deny/revoke exact-alarm access | App does not claim the alarm is scheduled; restoring access and retrying works |
-| Sign out/change accounts | Previous account's device alarms are cancelled |
-
-Force-stop, reboot-before-first-unlock, Do Not Disturb, zero alarm volume, and manufacturer battery restrictions need explicit phone checks; none is covered by a passing compile. The current boot receiver runs after unlock and cannot ring while the phone is powered off.
-
-Implementation references: [Android alarms](https://developer.android.com/develop/background-work/services/alarms), [full-screen alarm access](https://developer.android.com/about/versions/14/behavior-changes-14), [speech recognition](https://developer.android.com/reference/android/speech/SpeechRecognizer).
+References: [Android alarms](https://developer.android.com/develop/background-work/services/alarms), [direct boot](https://developer.android.com/privacy-and-security/direct-boot), [full-screen intents on Android 14](https://developer.android.com/about/versions/14/behavior-changes-14).

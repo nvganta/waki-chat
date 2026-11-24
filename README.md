@@ -1,20 +1,19 @@
-# waki-chat
+# Waki
 
-Waki is an Android talking-alarm application combining the Waki, WakeupChat and AlarmChat ideas.
+Waki is an Android alarm prototype for someone who wants a spoken greeting when they wake. Set a time on the phone; it rings with your alarm sound (or a built-in tone if that can't play), says the time and a short greeting with text-to-speech, and offers Stop, a ten-minute Snooze, and tap-to-speak commands when speech recognition is available. Alarms survive a reboot, even before the first unlock, and keep their clock time across time-zone and daylight saving changes. It has not yet been validated on a real phone and should not be your only alarm.
 
-## Current state
+## Run locally
 
-Use frontend/WakiAlarm, not the historical root React Native package or frontend package. Native alarm code and a debug APK exist; real-phone acceptance remains outstanding. Vapi conversation is unfinished. Do not equate provider configuration with a tested wake-up flow.
+You need Node 20+, Java 17, Android Studio's SDK and an Android device or emulator. From the repository root:
 
-See [LOG.md](LOG.md) for dated verification and outstanding work.
+```powershell
+npm ci --cache .npm-cache --prefix frontend/WakiAlarm
+npm start --prefix frontend/WakiAlarm
+```
 
-## Getting started
+In another terminal run `npm run android --prefix frontend/WakiAlarm`. For a standalone APK that runs without Metro, see [ANDROID-TESTING.md](ANDROID-TESTING.md). Allow Android's alarm and notification permissions when prompted. The local alarm does not need Firebase or the backend. Android setup and debug APK details are in [ANDROID-TESTING.md](ANDROID-TESTING.md); follow [DEVICE-TEST.md](DEVICE-TEST.md) to record phone results. Build and installation may take longer than five minutes on a fresh Android toolchain.
 
-Use [DEVELOPMENT.md](DEVELOPMENT.md) for commands and configuration.
-
-## Next milestone
-
-Connect the user's Android phone, configure the intended Firebase project, then verify scheduling, locked-screen ringing, snooze, stop and microphone interaction.
+The separate backend and website remain in this repository; the app's local alarm does not call paid providers. See [DEVELOPMENT.md](DEVELOPMENT.md) for their commands. Vapi conversation and briefings are not part of this alarm flow.
 
 <!-- repository-guide:start -->
 ## Repository guide
@@ -26,5 +25,3 @@ Connect the user's Android phone, configure the intended Firebase project, then 
 - [Roadmap](ROADMAP.md)
 - [Setup and verification](DEVELOPMENT.md)
 <!-- repository-guide:end -->
-
-The previous README is preserved in [docs/README-LEGACY.md](docs/README-LEGACY.md) for historical reference; its feature and setup claims may be outdated.
