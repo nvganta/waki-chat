@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.SystemClock
 import android.os.UserManager
+import com.wakialarm.MainActivity
 import org.json.JSONObject
 
 /**
@@ -133,8 +134,7 @@ class AlarmStore(context: Context) {
         val due = schedule(alarm).due
         if (!alarm.getBoolean("enabled") || due <= 0) return
         check(allowed()) { "Exact alarm permission is missing" }
-        val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)
-        val show = PendingIntent.getActivity(context, 0, launch, PendingIntent.FLAG_IMMUTABLE)
+        val show = PendingIntent.getActivity(context, 0, displayIntent(context), PendingIntent.FLAG_IMMUTABLE)
         // setAlarmClock is exempt from Doze and shows the alarm icon in the status bar.
         manager.setAlarmClock(AlarmManager.AlarmClockInfo(due, show), pending(id))
     }
@@ -178,6 +178,17 @@ class AlarmStore(context: Context) {
         private const val RINGING_AT = "ringingAt"
 
         @Volatile private var migrated = false
+
+        /**
+         * What the status-bar alarm opens. Named explicitly because before the first unlock
+         * package resolution skips MainActivity (it is not direct-boot aware), so
+         * getLaunchIntentForPackage() returns null and re-arming after a reboot would throw.
+         */
+        internal fun displayIntent(context: Context): Intent =
+            Intent(context, MainActivity::class.java)
+                .setAction(Intent.ACTION_MAIN)
+                .addCategory(Intent.CATEGORY_LAUNCHER)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
         private fun deviceStorage(context: Context): Context {
             val storage = context.createDeviceProtectedStorageContext()
