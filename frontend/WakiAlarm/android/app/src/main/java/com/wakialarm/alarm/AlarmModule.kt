@@ -23,40 +23,48 @@ class AlarmModule(private val context: ReactApplicationContext) : ReactContextBa
     override fun getName() = "WakiAlarms"
 
     @ReactMethod
-    fun scheduled(promise: Promise) = UiThreadUtil.runOnUiThread {
-        val store = AlarmStore(context)
-        val allowed = store.allowed()
-        // Without exact-alarm access Android has dropped the alarms, so never report them as scheduled.
-        val alarms = store.all().map { if (allowed) it else it.put("nextAt", 0L).put("snoozeAt", 0L) }
-        promise.resolve(JSONArray(alarms).toString())
-    }
-
-    @ReactMethod
-    fun schedule(json: String, promise: Promise) = UiThreadUtil.runOnUiThread {
-        try {
-            promise.resolve(AlarmStore(context).save(JSONObject(json)).toDouble())
-        } catch (error: Exception) {
-            promise.reject("SCHEDULE_FAILED", error.message, error)
+    fun scheduled(promise: Promise) {
+        UiThreadUtil.runOnUiThread {
+            val store = AlarmStore(context)
+            val allowed = store.allowed()
+            // Without exact-alarm access Android has dropped the alarms, so never report them as scheduled.
+            val alarms = store.all().map { if (allowed) it else it.put("nextAt", 0L).put("snoozeAt", 0L) }
+            promise.resolve(JSONArray(alarms).toString())
         }
     }
 
     @ReactMethod
-    fun cancel(id: String, promise: Promise) = UiThreadUtil.runOnUiThread {
-        try {
-            AlarmStore(context).remove(id)
-            promise.resolve(null)
-        } catch (error: Exception) {
-            promise.reject("CANCEL_FAILED", error)
+    fun schedule(json: String, promise: Promise) {
+        UiThreadUtil.runOnUiThread {
+            try {
+                promise.resolve(AlarmStore(context).save(JSONObject(json)).toDouble())
+            } catch (error: Exception) {
+                promise.reject("SCHEDULE_FAILED", error.message, error)
+            }
         }
     }
 
     @ReactMethod
-    fun restore(promise: Promise) = UiThreadUtil.runOnUiThread {
-        try {
-            AlarmStore(context).restore()
-            promise.resolve(null)
-        } catch (error: Exception) {
-            promise.reject("RESTORE_FAILED", error)
+    fun cancel(id: String, promise: Promise) {
+        UiThreadUtil.runOnUiThread {
+            try {
+                AlarmStore(context).remove(id)
+                promise.resolve(null)
+            } catch (error: Exception) {
+                promise.reject("CANCEL_FAILED", error)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun restore(promise: Promise) {
+        UiThreadUtil.runOnUiThread {
+            try {
+                AlarmStore(context).restore()
+                promise.resolve(null)
+            } catch (error: Exception) {
+                promise.reject("RESTORE_FAILED", error)
+            }
         }
     }
 
